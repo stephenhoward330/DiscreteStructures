@@ -1,0 +1,28 @@
+
+
+Schemes:
+A(a,b)
+B(c,d)
+C(e,f)
+D(g,h)
+E(i,j)
+F(k,l)
+G(m,n)
+
+Facts:
+A('bob','ned').
+B('jim','bob').
+C('sue','ned').
+
+Rules:
+A(X,Y) :- B(X,Y), C(X,Y). # R0
+B(X,Y) :- A(X,Y), D(X,Y). # R1
+B(X,Y) :- B(Y,X).         # R2
+E(X,Y) :- F(X,Y), G(X,Y). # R3
+E(X,Y) :- E(X,Y), F(X,Y). # R4
+
+Queries:
+A(x,'ned')?
+B('ned','sue')?
+
+
