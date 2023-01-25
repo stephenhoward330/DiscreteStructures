@@ -1,0 +1,207 @@
+#include "DatalogProgram.h"
+#include <algorithm>
+
+void DatalogProgram::nextToken() {
+	token = tokenVector.at(tokenNum);
+	tokenNum++;
+	cout << "Got token: " << token.getVal() << endl;
+}
+
+void DatalogProgram::match(TokenType type) {
+	if (token.getType() == type) nextToken();
+	else throw token;
+}
+
+void DatalogProgram::parse() {
+	nextToken();
+	if (token.getType() == SCHEMES) {
+		match(SCHEMES); match(COLON); scheme(); schemeList();
+	}
+	else throw token;
+	if (token.getType() == FACTS) {
+		match(FACTS); match(COLON); factList();
+	}
+	else throw token;
+	if (token.getType() == RULES) {
+		match(RULES); match(COLON); ruleList();
+	}
+	else throw token;
+	if (token.getType() == QUERIES) {
+		match(QUERIES); match(COLON); queryList();
+	}
+	else throw token;
+	if (token.getType() != EOFILE) throw token;
+}
+
+void DatalogProgram::schemeList() {
+	if (token.getType() == ID) {
+		scheme(); schemeList();
+	}
+}
+
+void DatalogProgram::factList() {
+	if (token.getType() == ID) {
+		fact(); factList();
+	}
+}
+
+void DatalogProgram::ruleList() {
+	if (token.getType() == ID) {
+		rule(); ruleList();
+	}
+}
+
+void DatalogProgram::queryList() {
+	if (token.getType() == ID) {
+		query(); queryList();
+	}
+}
+
+void DatalogProgram::scheme() {
+	if (token.getType() == ID) {
+		string newID;
+		vector<Parameter> newParameterVector;
+		match(ID); newID = token.getVal(); match(LEFT_PAREN); match(ID);
+		Parameter newParam(token.getVal()); newParameterVector.push_back(newParam);
+		idList(); match(RIGHT_PAREN);
+		Predicate scheme(newID, newParameterVector);
+		schemesVector.push_back(scheme);
+	}
+	else throw token;
+}
+
+void DatalogProgram::fact() {
+	if (token.getType() == ID) {
+		match(ID); match(LEFT_PAREN); match(STRING); stringList(); match(RIGHT_PAREN); match(PERIOD);
+	}
+	else throw token;
+}
+
+void DatalogProgram::rule() {
+	if (token.getType() == ID) {
+		headPredicate(); match(COLON_DASH); predicate(); predicateList(); match(PERIOD);
+	}
+	else throw token;
+}
+
+void DatalogProgram::query() {
+	if (token.getType() == ID) {
+		predicate(); match(Q_MARK);
+	}
+	else throw token;
+}
+
+void DatalogProgram::headPredicate() {
+	if (token.getType() == ID) {
+		match(ID); match(LEFT_PAREN); match(ID); idList(); match(RIGHT_PAREN);
+	}
+	else throw token;
+}
+
+void DatalogProgram::predicate() {
+	if (token.getType() == ID) {
+		match(ID); match(LEFT_PAREN); parameter(); parameterList(); match(RIGHT_PAREN);
+	}
+	else throw token;
+}
+
+void DatalogProgram::predicateList() {
+	if (token.getType() == COMMA) {
+		match(COMMA); predicate(); predicateList();
+	}
+}
+
+void DatalogProgram::parameterList() {
+	if (token.getType() == COMMA) {
+		match(COMMA); parameter(); parameterList();
+	}
+}
+
+void DatalogProgram::stringList() {
+	if (token.getType() == COMMA) {
+		match(COMMA); match(STRING); stringList();
+	}
+}
+
+void DatalogProgram::idList() {
+	if (token.getType() == COMMA) {
+		match(COMMA); match(ID); Parameter newParam(token.getVal());
+		newParameterVector.push_back(newParam); idList();
+	}
+}
+
+void DatalogProgram::parameter() {
+	if (token.getType() == ID) {
+		match(ID);
+	}
+	else if (token.getType() == LEFT_PAREN) {
+		expression();
+	}
+	else if (token.getType() == STRING) {
+		match(STRING);
+	}
+	else throw token;
+}
+
+void DatalogProgram::expression() {
+	if (token.getType() == LEFT_PAREN) {
+		match(LEFT_PAREN); parameter(); op(); parameter(); match(RIGHT_PAREN);
+	}
+	else throw token;
+}
+
+void DatalogProgram::op() {
+	if (token.getType() == ADD) {
+		match(ADD);
+	}
+	else if (token.getType() == MULTIPLY) {
+		match(MULTIPLY);
+	}
+	else throw token;
+}
+
+
+
+void DatalogProgram::toString() {
+	cout << "Success!" << endl;
+	if (schemesVector.size() > 0) {
+		cout << "Schemes(" << schemesVector.size() << "):" << endl;
+		for (unsigned i = 0; i < schemesVector.size(); i++) {
+			cout << "  ";
+			schemesVector.at(i).toString();
+			cout << endl;
+		}
+	}
+	if (factsVector.size() > 0) {
+		cout << "Facts(" << factsVector.size() << "):" << endl;
+		for (unsigned i = 0; i < factsVector.size(); i++) {
+			cout << "  ";
+			factsVector.at(i).toString();
+			cout << "." << endl;
+		}
+	}
+	if (rulesVector.size() > 0) {
+		cout << "Rules(" << rulesVector.size() << "):" << endl;
+		for (unsigned i = 0; i < rulesVector.size(); i++) {
+			cout << "  ";
+			rulesVector.at(i).toString();
+			cout << "." << endl;
+		}
+	}
+	if (queriesVector.size() > 0) {
+		cout << "Queries(" << queriesVector.size() << "):" << endl;
+		for (unsigned i = 0; i < queriesVector.size(); i++) {
+			cout << "  ";
+			queriesVector.at(i).toString();
+			cout << "?" << endl;
+		}
+	}
+	sort(domainVector.begin(), domainVector.end());
+	domainVector.erase(unique(domainVector.begin(), domainVector.end()), domainVector.end());
+	if (domainVector.size() > 0) {
+		cout << "Domain(" << domainVector.size() << "):" << endl;
+		for (unsigned i = 0; i < domainVector.size(); i++) {
+			cout << "  " << domainVector.at(i) << endl;
+		}
+	}
+}
